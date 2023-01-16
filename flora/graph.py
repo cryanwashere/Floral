@@ -15,15 +15,30 @@ class GraphNode(object):
         self.isTensor = False
         self.isFork = False
 
+        self.parents = list()
+        self.grad_fns = list()
+
+        self.link = self
+    def make_grad_fns(self):
+        for i in range(len(self.parents)):
+            # get a function that computes the derivative of the 
+            # node's output, with respect to the ith parent
+            grad_fn = grad(self.fn,argnums=i)
+            self.grad_fns.append(grad_fn)
+
+class GraphModule(object):
+    def __init__(self):
+        pass
+
 class Tensor(GraphNode):
     def __init__(self, param):
-        super().__init__(self)
+        super().__init__()
         self.isTensor = True
         self.param = param
+        self.grad = None
 
-        self.parents = list()
-        self.grad_fn = list()
         
+
 class ForkNode(GraphNode):
     def __init__(self, parent, fork_count):
         super.__init__(self)
@@ -41,17 +56,19 @@ class ForwardProbe(object):
     def __init__(self):
         pass
     def trace(self, node):
-        # check if the node has already gathered it's value
-        if node.cache is not None:
-            # recursively gather the output values from the node's
-            # parents, then store the output values in the node's 
-            # cache for differentiation
-            node.cache = list()
-            for parent in node.parents:
-                node.cache.append(self.trace(parent))
-        
         # run the node's function on the parent's output values
-        return node.fn(*node.cache)
+        if node.isTensor:
+            return node.param
+        else:
+            # check if the node has already gathered it's value
+            if node.cache is None: # this should be functionally equivalent to: if node.isFork:
+                # recursively gather the output values from the node's
+                # parents, then store the output values in the node's 
+                # cache for differentiation
+                node.cache = list()
+                for parent in node.parents:
+                    node.cache.append(self.trace(parent))
+            return node.fn(*node.cache)
     def clear_cache(self, node):
         if node.cache is not None:
             for parent in node.parents:
@@ -80,6 +97,10 @@ class GradientProbe(object):
             if node.fork_counter_cache == node.fork_count:
                 self.trace(node.parents[0])
 
+        elif node.isTensor:
+
+            node.grad = dL
+
         else:
             # compute the local gradients
             node.local_grad_cache = list()
@@ -93,8 +114,8 @@ class GradientProbe(object):
                 node.global_grad_cache.append(grad_cache * dL)
 
             # recursively backpropogate through the graph
-            for parent in node.parents:
-                self.trace(parent)
+            for parent, i in enumerate(node.parents):
+                self.trace(parent, node.global_grad_cache[i])
     def clear_cache(self, node):
         if node.isFork:
             node.fork_cache = None
@@ -116,7 +137,7 @@ class OptimizationProbe(object):
         if node.isTensor:
             # the only thing a tensor does is store a param value, 
             # so its global gradient cache will only have one element
-            self.optimizer.optimize(node.param, node.global_grad_cache[0])
+            node.param = self.optimizer.optimize(node.param, node.grad[0])
         else:
             for parent in node.parents:
                 self.trace(parent)
