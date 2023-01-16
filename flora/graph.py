@@ -36,6 +36,8 @@ class Tensor(GraphNode):
         self.isTensor = True
         self.param = param
         self.grad = None
+    def __str__(self):
+        return "Tensor, shape: {}".format(self.param.shape)
 
         
 

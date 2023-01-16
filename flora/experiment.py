@@ -1,9 +1,16 @@
-import graph as g
 import numpy as np
-from jax import grad
-import jax.numpy as jnp
 
-def fn(x):
-    return (x * 2), x
-grad_fn = grad(fn)
-print(grad_fn(100.0))
+import visual
+import graph
+import nn
+
+
+
+_input = graph.Tensor(np.random.rand(64) * 0.1)
+linear = nn.Linear(_input, 64)
+
+forward = graph.ForwardProbe()
+
+print(forward.trace(linear.link))
+
+visual.summary(linear.link)

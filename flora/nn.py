@@ -49,9 +49,3 @@ class Linear(graph.GraphModule):
 
 
 
-_input = graph.Tensor(np.random.rand(64) * 0.1)
-linear = Linear(_input, 64)
-
-forward = graph.ForwardProbe()
-
-print(forward.trace(linear.link))
