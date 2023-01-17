@@ -14,6 +14,7 @@ class GraphNode(object):
         # of nodes
         self.isTensor = False
         self.isFork = False
+        self.isLabel = False
 
         self.parents = list()
         self.grad_fns = list()
@@ -37,7 +38,7 @@ class Tensor(GraphNode):
         self.param = param
         self.grad = None
     def __str__(self):
-        return "Tensor, shape: {}".format(self.param.shape)
+        return "Tensor"
 
         
 
@@ -139,7 +140,7 @@ class OptimizationProbe(object):
         if node.isTensor:
             # the only thing a tensor does is store a param value, 
             # so its global gradient cache will only have one element
-            node.param = self.optimizer.optimize(node.param, node.grad[0])
+            node.param = self.optimizer.optimize(node.param, node.grad)
         else:
             for parent in node.parents:
                 self.trace(parent)

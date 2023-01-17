@@ -21,14 +21,15 @@ class Add(graph.GraphNode):
     def fn(x,y):
         return x + y
 
-
 class Weight(graph.GraphModule):
-    def __init__(self, parent, dim):
-        self.weight = graph.Tensor(np.random.rand(dim,dim) * 0.1)
+    def __init__(self, parent, shape):
+        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1)
         
         self.matmul = MatMul([parent, self.weight])
 
         self.link = self.matmul
+    def __str__(self):
+        return "Weight, dim: {}".format(self.weight.param.shape)
 
 class Bias(graph.GraphModule):
     def __init__(self, parent, dim):
@@ -37,12 +38,14 @@ class Bias(graph.GraphModule):
         self.add = Add([parent, self.bias])
 
         self.link = self.add
+    def __str__(self):
+        return "Bias, dim: {}".format(self.bias.param.shape)
 
 class Linear(graph.GraphModule):
-    def __init__(self, parent, dim):
+    def __init__(self, parent, shape):
 
-        self.weight = Weight(parent, dim)
-        self.bias = Bias(self.weight.link, dim)
+        self.weight = Weight(parent, shape)
+        self.bias = Bias(self.weight.link, shape[-1])
 
         self.link = self.bias.link
 
