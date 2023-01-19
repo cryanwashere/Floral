@@ -47,7 +47,8 @@ class Tensor(GraphNode):
         self.des = des
         self.frozen = frozen
     def __str__(self):
-        return "Tensor\nparam:\n{}\ngrad:{}\n".format(self.param,self.grad)
+        #return "Tensor {}".format(self.des)
+        return "Tensor {}\nparam:\n{}\ngrad:{}\n".format(self.des,self.param,self.grad)
         
 
 class ForkNode(GraphNode):
@@ -79,7 +80,9 @@ class ForwardProbe(object):
                 node.cache = list()
                 for parent in node.parents:
                     node.cache.append(self.trace(parent))
-            return node.fn(*node.cache)
+            out = node.fn(*node.cache)
+            #print(out)
+            return out
     def clear_cache(self, node):
         if node.cache is not None:
             for parent in node.parents:
@@ -138,7 +141,7 @@ class GradientProbe(object):
                     #print(node)
                     if (len(grad_cache.shape) >= 1) and (len(dL.shape) >= 1):
                     #    print("@ grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
-                        node.global_grad_cache.append(grad_cache.T @ dL)
+                        node.global_grad_cache.append(dL @ grad_cache)
                     else:
                     #    print("* grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
                         node.global_grad_cache.append(grad_cache * dL)
@@ -170,9 +173,11 @@ class OptimizationProbe(object):
         # TODO
         # this algorithm needs to account for fork nodes
         if node.isTensor:
+            #print(node)
             if not node.frozen:
                 # the only thing a tensor does is store a param value, 
                 # so its global gradient cache will only have one element
+                #print(node)
                 node.param = self.optimizer.optimize(node.param, node.grad)
         else:
             for parent in node.parents:

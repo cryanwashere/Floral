@@ -31,20 +31,36 @@ W = W - 0.1 * W_grad
 print(L(fn(W,X)))
 '''
 
+
 x = jnp.array([
     [1.,1.,1.],
     [1.,1.,1.]
 ])
 
-y = jnp.array([
-    [1.,1.],
-    [1.,1.],
-    [1.,1.]
-])
+y = jnp.array([1.,1.,1.])
+
+z = jnp.array([0.,0.])
+
+k = jnp.array([0.,1.])
 
 
-
-def fn(x,y):
+def W(x,y):
     return x @ y
+def B(W,z):
+    return W + z
+def L(B,k):
+    return jnp.mean((B-k) ** 2)
 
-print(jacfwd(fn,1)(x,y))
+W_out = W(x,y)
+B_out = B(W_out,z)
+L_out = L(B_out,k)
+
+gradfn_W_x = jacfwd(W,0)
+gradfn_B_W = jacfwd(B,0)
+gradfn_L_B = jacfwd(L,0)
+
+
+grad_L_B = gradfn_L_B(B_out,k)
+grad_B_W = gradfn_B_W(W_out,z)
+grad_W_x = gradfn_W_x(x,y)
+print((grad_L_B @ grad_B_W) @ grad_W_x)

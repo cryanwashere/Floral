@@ -46,15 +46,15 @@ def optimize(link):
 
 
 
-inp = graph.Tensor(np.array([5.0,5.0,5.0]))
-lnr = nn.Linear(inp,[3,2])
-lbl = graph.Tensor(np.array([6.0,6.0]), frozen=True)
+inp = graph.Tensor(np.array([5.0,5.0,5.0]), frozen=True, des="input")
+lnr = nn.Linear(inp,[2,3])
+lbl = graph.Tensor(np.array([6.0,6.0]), frozen=True, des="label")
 mse = loss.MeanSquaredError(lnr.link)
 mse.attach(lbl)
 
 #visual.summary(mse)
 
-for i in range(3):
+for i in range(10):
     optimize(mse)
     print(inference(mse))
 

@@ -9,7 +9,7 @@ class MatMul(graph.GraphNode):
         self.parents = parents
     @staticmethod
     def fn(x,y):
-        return (x @ y)
+        return x @ y
 
 class Add(graph.GraphNode):
     def __init__(self, parents):
@@ -17,14 +17,14 @@ class Add(graph.GraphNode):
         self.parents = parents
     @staticmethod
     def fn(x,y):
-        return (x + y)
+        return x + y
 
 class Weight(graph.GraphModule):
     def __init__(self, parent, shape):
-        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1, "weight")
+        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1, des="weight")
         #self.weight = graph.Tensor(jnp.array([[1.,2.],[1.,2.],[1.,2.]]), "weight")
 
-        self.matmul = MatMul([parent, self.weight])
+        self.matmul = MatMul([self.weight, parent])
 
         self.link = self.matmul
     def __str__(self):
@@ -32,7 +32,7 @@ class Weight(graph.GraphModule):
 
 class Bias(graph.GraphModule):
     def __init__(self, parent, dim):
-        self.bias = graph.Tensor(np.random.rand(dim) * 0.1, "bias")
+        self.bias = graph.Tensor(np.random.rand(dim) * 0.1, des="bias")
         #self.bias = graph.Tensor(jnp.array([1.,2.]), "bias")
 
         self.add = Add([parent, self.bias])
@@ -45,7 +45,7 @@ class Linear(graph.GraphModule):
     def __init__(self, parent, shape):
 
         self.weight = Weight(parent, shape)
-        self.bias = Bias(self.weight.link, shape[-1])
+        self.bias = Bias(self.weight.link, shape[0])
 
         self.link = self.bias.link
 
