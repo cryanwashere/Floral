@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-from jax import grad
+from jax import grad, jacfwd
 import numpy as np
 
 class GraphNode(object):
@@ -26,20 +26,23 @@ class GraphNode(object):
             # node's output, with respect to the ith parent
             grad_fn = grad(self.fn,argnums=i)
             self.grad_fns.append(grad_fn)
+    def __str__(self):
+        return "\nGraph node:\n parents:\n{}\ninput cache:\n{}\n global gradient cache:\n {}".format(self.parents, self.cache, self.global_grad_cache)
 
 class GraphModule(object):
     def __init__(self):
         pass
 
 class Tensor(GraphNode):
-    def __init__(self, param):
+    def __init__(self, param, des=""):
         super().__init__()
         self.isTensor = True
         self.param = param
         self.grad = None
-    def __str__(self):
-        return "Tensor"
-
+        
+        self.des = des
+    
+    
         
 
 class ForkNode(GraphNode):
@@ -82,6 +85,7 @@ class GradientProbe(object):
     def __init__(self):
         pass
     def trace(self, node, dL):
+        print(node)
         # the node should have a jax-computed gradient function with
         # respect to every one of it's parents
 
@@ -105,19 +109,28 @@ class GradientProbe(object):
             node.grad = dL
 
         else:
-            # compute the local gradients
             node.local_grad_cache = list()
-            for grad_fn in node.grad_fns: 
-                node.local_grad_cache.append(grad_fn(*node.cache))
+            # compute the derivative of the node with respect to each of the parents
+            for i, cache in enumerate(node.cache):
+                jacfwd_grad_fn = jacfwd(node.fn, argnums=i)
+                node.local_grad_cache.append(jacfwd_grad_fn)
+
             
             #compute the global gradients
             node.global_grad_cache = list()
             for grad_cache in node.local_grad_cache:
-                # chain rule
-                node.global_grad_cache.append(grad_cache * dL)
+                if dL is None:
+                    node.global_grad_cache.append(grad_cache)
+                else:
+                    # chain rule
+                    # it needs to be determined whether to do 
+                    # regular multiplcation ( * ), or matrix
+                    # multiplication ( @ )
+                    node.global_grad_cache.append(grad_cache * dL)
 
+            
             # recursively backpropogate through the graph
-            for parent, i in enumerate(node.parents):
+            for i, parent in enumerate(node.parents):
                 self.trace(parent, node.global_grad_cache[i])
     def clear_cache(self, node):
         if node.isFork:
@@ -127,6 +140,8 @@ class GradientProbe(object):
             node.local_grad_cache = None
         if node.global_grad_cache is not None:
             node.global_grad_cache = None
+        if node.grad is not None:
+            node.grad = None
         if node.cache is not None:
             node.cache = None
             for parent in node.parents:

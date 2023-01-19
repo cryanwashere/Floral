@@ -7,23 +7,21 @@ class MatMul(graph.GraphNode):
     def __init__(self, parents):
         super().__init__()
         self.parents = parents
-        self.make_grad_fns()
     @staticmethod
     def fn(x,y):
-        return x @ y
+        return (x @ y)
 
 class Add(graph.GraphNode):
     def __init__(self, parents):
         super().__init__()
         self.parents = parents
-        self.make_grad_fns()
     @staticmethod
     def fn(x,y):
-        return x + y
+        return (x + y)
 
 class Weight(graph.GraphModule):
     def __init__(self, parent, shape):
-        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1)
+        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1, "weight")
         
         self.matmul = MatMul([parent, self.weight])
 
@@ -33,7 +31,7 @@ class Weight(graph.GraphModule):
 
 class Bias(graph.GraphModule):
     def __init__(self, parent, dim):
-        self.bias = graph.Tensor(np.random.rand(dim) * 0.1)
+        self.bias = graph.Tensor(np.random.rand(dim) * 0.1, "bias")
 
         self.add = Add([parent, self.bias])
 

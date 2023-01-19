@@ -1,22 +1,31 @@
-import numpy as np
-
-import visual
-import loss
-import graph
-import nn
+import jax.numpy as jnp
+from jax import grad, jacfwd, jacrev, vjp
 
 
+W = jnp.array([
+    [1.,1.,1.],
+    [1.,1.,1.]
+])
 
-_input = graph.Tensor(np.random.rand(64) * 0.1)
-linear = nn.Linear(_input, [64,64])
-linear2 = nn.Linear(linear.link, [64,1])
+X = jnp.array([1.,2.,3.])
 
-mse = loss.MeanSquaredError(linear2.link)
-label = graph.Tensor(np.random.randint(10))
-mse.attach(label)
 
-forward = graph.ForwardProbe()
-_loss = forward.trace(mse)
-print("loss: {}".format(_loss))
 
-visual.summary(mse)
+def fn(w,x):
+    return w @ x
+
+
+
+jacfwd_grad_fn = jacfwd(fn, argnums=0)
+W_jacobian = jacfwd_grad_fn(W,X)
+
+Z = fn(W,X)
+
+def L(z):
+    return jnp.sum(z)
+
+jacfwd_grad_L = jacfwd(L)
+W_grad = jacfwd_grad_L(Z) @ W_jacobian
+print(L(fn(W,X)))
+W = W - 0.1 * W_grad
+print(L(fn(W,X)))
