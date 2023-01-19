@@ -12,9 +12,13 @@ class GraphNode(object):
         # important to the graph algorithm's functioning. Probes
         # will nead to know if a node is one of the special types 
         # of nodes
+
+        # if a node is a tensor, then it does not have any parents
+        # and it has a gradient variable 
         self.isTensor = False
+        # if a node is a ForkNode, then that means the graph splits 
+        # at it, and it needs to be treated specially
         self.isFork = False
-        self.isLabel = False
 
         self.parents = list()
         self.grad_fns = list()
@@ -26,23 +30,24 @@ class GraphNode(object):
             # node's output, with respect to the ith parent
             grad_fn = grad(self.fn,argnums=i)
             self.grad_fns.append(grad_fn)
-    def __str__(self):
-        return "\nGraph node:\n parents:\n{}\ninput cache:\n{}\n global gradient cache:\n {}".format(self.parents, self.cache, self.global_grad_cache)
+    #def __str__(self):
+        #return "\nGraph node:\n parents:\n{}\ninput cache:\n{}\n global gradient cache:\n {}".format(self.parents, self.cache, self.global_grad_cache)
 
 class GraphModule(object):
     def __init__(self):
         pass
 
 class Tensor(GraphNode):
-    def __init__(self, param, des=""):
+    def __init__(self, param, frozen=False, des=""):
         super().__init__()
         self.isTensor = True
         self.param = param
         self.grad = None
         
         self.des = des
-    
-    
+        self.frozen = frozen
+    def __str__(self):
+        return "Tensor\nparam:\n{}\ngrad:{}\n".format(self.param,self.grad)
         
 
 class ForkNode(GraphNode):
@@ -67,7 +72,7 @@ class ForwardProbe(object):
             return node.param
         else:
             # check if the node has already gathered it's value
-            if node.cache is None: # this should be functionally equivalent to: if node.isFork:
+            if node.cache is None:
                 # recursively gather the output values from the node's
                 # parents, then store the output values in the node's 
                 # cache for differentiation
@@ -85,7 +90,7 @@ class GradientProbe(object):
     def __init__(self):
         pass
     def trace(self, node, dL):
-        print(node)
+        
         # the node should have a jax-computed gradient function with
         # respect to every one of it's parents
 
@@ -113,20 +118,30 @@ class GradientProbe(object):
             # compute the derivative of the node with respect to each of the parents
             for i, cache in enumerate(node.cache):
                 jacfwd_grad_fn = jacfwd(node.fn, argnums=i)
-                node.local_grad_cache.append(jacfwd_grad_fn)
+                node.local_grad_cache.append(jacfwd_grad_fn(*node.cache))
 
             
+            #print(node, node.local_grad_cache)
             #compute the global gradients
             node.global_grad_cache = list()
             for grad_cache in node.local_grad_cache:
+                #print(node, grad_cache, dL)
                 if dL is None:
                     node.global_grad_cache.append(grad_cache)
                 else:
                     # chain rule
+
+                    # TODO
                     # it needs to be determined whether to do 
                     # regular multiplcation ( * ), or matrix
                     # multiplication ( @ )
-                    node.global_grad_cache.append(grad_cache * dL)
+                    #print(node)
+                    if (len(grad_cache.shape) >= 1) and (len(dL.shape) >= 1):
+                    #    print("@ grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
+                        node.global_grad_cache.append(grad_cache.T @ dL)
+                    else:
+                    #    print("* grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
+                        node.global_grad_cache.append(grad_cache * dL)
 
             
             # recursively backpropogate through the graph
@@ -152,10 +167,13 @@ class OptimizationProbe(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
     def trace(self, node):
+        # TODO
+        # this algorithm needs to account for fork nodes
         if node.isTensor:
-            # the only thing a tensor does is store a param value, 
-            # so its global gradient cache will only have one element
-            node.param = self.optimizer.optimize(node.param, node.grad)
+            if not node.frozen:
+                # the only thing a tensor does is store a param value, 
+                # so its global gradient cache will only have one element
+                node.param = self.optimizer.optimize(node.param, node.grad)
         else:
             for parent in node.parents:
                 self.trace(parent)

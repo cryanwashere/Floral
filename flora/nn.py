@@ -22,7 +22,8 @@ class Add(graph.GraphNode):
 class Weight(graph.GraphModule):
     def __init__(self, parent, shape):
         self.weight = graph.Tensor(np.random.rand(*shape) * 0.1, "weight")
-        
+        #self.weight = graph.Tensor(jnp.array([[1.,2.],[1.,2.],[1.,2.]]), "weight")
+
         self.matmul = MatMul([parent, self.weight])
 
         self.link = self.matmul
@@ -32,6 +33,7 @@ class Weight(graph.GraphModule):
 class Bias(graph.GraphModule):
     def __init__(self, parent, dim):
         self.bias = graph.Tensor(np.random.rand(dim) * 0.1, "bias")
+        #self.bias = graph.Tensor(jnp.array([1.,2.]), "bias")
 
         self.add = Add([parent, self.bias])
 

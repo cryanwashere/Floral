@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 from jax import grad, jacfwd, jacrev, vjp
 
-
+'''
 W = jnp.array([
     [1.,1.,1.],
     [1.,1.,1.]
@@ -29,3 +29,22 @@ W_grad = jacfwd_grad_L(Z) @ W_jacobian
 print(L(fn(W,X)))
 W = W - 0.1 * W_grad
 print(L(fn(W,X)))
+'''
+
+x = jnp.array([
+    [1.,1.,1.],
+    [1.,1.,1.]
+])
+
+y = jnp.array([
+    [1.,1.],
+    [1.,1.],
+    [1.,1.]
+])
+
+
+
+def fn(x,y):
+    return x @ y
+
+print(jacfwd(fn,1)(x,y))
