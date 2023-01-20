@@ -34,8 +34,15 @@ class GraphNode(object):
         #return "\nGraph node:\n parents:\n{}\ninput cache:\n{}\n global gradient cache:\n {}".format(self.parents, self.cache, self.global_grad_cache)
 
 class GraphModule(object):
+    # this is not a graph node, but a container to store graph nodes
     def __init__(self):
-        pass
+        self.roots = list()
+    def __call__(self, root):
+        link = self.roots[root]
+        forward_probe = ForwardProbe()
+        out = forward_probe.trace(link)
+        forward_probe.clear_cache(link)
+        return out
 
 class Tensor(GraphNode):
     def __init__(self, param, frozen=False, des=""):
@@ -49,6 +56,17 @@ class Tensor(GraphNode):
     def __str__(self):
         #return "Tensor {}".format(self.des)
         return "Tensor {}\nparam:\n{}\ngrad:{}\n".format(self.des,self.param,self.grad)
+
+    def __add__(self,x):
+        print(self.param, x.param)
+        self.param += x.param
+        return self
+    def __mul__(self,x):
+        self.param *= x.param
+        return self
+    def __div__(self,x):
+        self.param /= x.param
+        return self
         
 
 class ForkNode(GraphNode):
@@ -180,5 +198,16 @@ class OptimizationProbe(object):
                 #print(node)
                 node.param = self.optimizer.optimize(node.param, node.grad)
         else:
-            for parent in node.parents:
-                self.trace(parent)
+            if node.isFork:
+                # this will manage backwards differentiation for fork nodes
+
+                # count how many times the probe has reached the fork. 
+                node.fork_counter_cache += 1
+                
+                # if the probe has reached the fork as many times as it splits,
+                # then it the probe will continue tracing
+                if node.fork_counter_cache == node.fork_count:
+                    self.trace(node.parents[0])
+            else:
+                for parent in node.parents:
+                    self.trace(parent)

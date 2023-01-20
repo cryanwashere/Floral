@@ -52,3 +52,20 @@ class Linear(graph.GraphModule):
 
 
 
+class ReLU(graph.GraphNode):
+    def __init__(self, parent):
+        super().__init__()
+        self.parents = [parent]
+    @staticmethod
+    def fn(x):
+        return jnp.maximum(x,0)
+
+class Softmax(graph.GraphNode):
+    def __init__(self, parent):
+        super().__init__()
+        self.parents = [parent]
+    @staticmethod
+    def fn(x):
+        exp = jnp.exp(x)
+        return exp / jnp.sum(exp)
+

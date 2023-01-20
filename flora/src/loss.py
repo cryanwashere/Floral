@@ -20,4 +20,15 @@ class MeanSquaredError(LossNode):
         return jnp.mean((x - y) ** 2)
     def __str__(self):
         return "Mean Squared Error Loss"
+
+
+
+class CategoricalCrossEntropy(LossNode):
+    def __init__(self, parent):
+        super().__init__(parent)
+    @staticmethod
+    def fn(x,y):
+        smx = jnp.exp(x)
+        smx = smx / jnp.sum(smx)
+        return -jnp.sum(y * jnp.log(smx))
     
