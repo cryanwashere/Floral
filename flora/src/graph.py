@@ -53,9 +53,15 @@ class Tensor(GraphNode):
         
         self.des = des
         self.frozen = frozen
+    def shape(self):
+        return self.param.shape
     def __str__(self):
         return "Tensor {}, shape:{}".format(self.des, self.param.shape)
         #return "Tensor {}\nparam:\n{}\ngrad:{}\n".format(self.des,self.param,self.grad)
+    def __len__(self):
+        return self.param.shape[0]
+    def __getitem__(self, idx):
+        return Tensor(self.param[idx], frozen=self.frozen, des=self.des)
 
     def __add__(self,x):
         print(self.param, x.param)
@@ -82,34 +88,28 @@ class ForkNode(GraphNode):
         return x
     
 
-class ForwardProbe(object):
-    def __init__(self):
-        pass
-    def trace(self, node, test=False):
 
-        if node.isTensor:
-            return node.param
-        else:
-            node.cache = list()
-            for parent in node.parents:
-                node.cache.append(self.trace(parent))
-            #print(node, node.cache)
-            out = node.fn(*node.cache)
-            return out
+def forward_trace( node ):
+    if node.isTensor:
+        return node.param
+    else:
+        node.cache = list()
+        for parent in node.parents:
+            node.cache.append(forward_trace(parent))
+        #print(node, node.cache)
+        out = node.fn(*node.cache)
+        return out
 
 
-class GradientProbe(object):
-    def __init__(self):
-        pass
-    def trace(self, node, phi=None):
-        if phi is None:
-            phi = lambda x : x
-        for i, parent in enumerate(node.parents):
-            psi = lambda y: phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))
-            if parent.isTensor:
-                if not parent.frozen:
-                    parent.grad = grad(psi)(node.cache[i])
-            self.trace(parent, psi)    
+def gradient_trace(node, phi=None):
+    if phi is None:
+        phi = lambda x : x
+    for i, parent in enumerate(node.parents):
+        psi = lambda y: phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))
+        if parent.isTensor:
+            if not parent.frozen:
+                parent.grad = grad(psi)(node.cache[i])
+        gradient_trace(parent, psi)    
         
 
 class OptimizationProbe(object):
