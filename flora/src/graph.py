@@ -23,13 +23,13 @@ class GraphNode(object):
         self.parents = list()
         self.grad_fns = list()
 
+        self.tip = self
         self.link = self
-    def make_grad_fns(self):
-        for i in range(len(self.parents)):
-            # get a function that computes the derivative of the 
-            # node's output, with respect to the ith parent
-            grad_fn = grad(self.fn,argnums=i)
-            self.grad_fns.append(grad_fn)
+    '''
+    @staticmethod
+    def fn(x):
+        return x
+    '''
     #def __str__(self):
         #return "\nGraph node:\n parents:\n{}\ninput cache:\n{}\n global gradient cache:\n {}".format(self.parents, self.cache, self.global_grad_cache)
 
@@ -54,8 +54,8 @@ class Tensor(GraphNode):
         self.des = des
         self.frozen = frozen
     def __str__(self):
-        #return "Tensor {}".format(self.des)
-        return "Tensor {}\nparam:\n{}\ngrad:{}\n".format(self.des,self.param,self.grad)
+        return "Tensor {}, shape:{}".format(self.des, self.param.shape)
+        #return "Tensor {}\nparam:\n{}\ngrad:{}\n".format(self.des,self.param,self.grad)
 
     def __add__(self,x):
         print(self.param, x.param)
@@ -110,8 +110,8 @@ class ForwardProbe(object):
 class GradientProbe(object):
     def __init__(self):
         pass
-    def trace(self, node, dL):
-        
+    def trace(self, node, dL=None):
+        #print("opening node, {}".format(node))
         # the node should have a jax-computed gradient function with
         # respect to every one of it's parents
 
@@ -138,15 +138,19 @@ class GradientProbe(object):
             node.local_grad_cache = list()
             # compute the derivative of the node with respect to each of the parents
             for i, cache in enumerate(node.cache):
+               # print("iterating through node cache: {}".format(i))
                 jacfwd_grad_fn = jacfwd(node.fn, argnums=i)
+                #print("calculated gradient function with jax")
+                #print(node.cache)
                 node.local_grad_cache.append(jacfwd_grad_fn(*node.cache))
-
+            #print(node.local_grad_cache)
             
             #print(node, node.local_grad_cache)
             #compute the global gradients
             node.global_grad_cache = list()
             for grad_cache in node.local_grad_cache:
                 #print(node, grad_cache, dL)
+                #print("iterating through local grad cache")
                 if dL is None:
                     node.global_grad_cache.append(grad_cache)
                 else:
@@ -157,31 +161,22 @@ class GradientProbe(object):
                     # regular multiplcation ( * ), or matrix
                     # multiplication ( @ )
                     #print(node)
+                    #print("doing matmul")
                     if (len(grad_cache.shape) >= 1) and (len(dL.shape) >= 1):
                     #    print("@ grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
                         node.global_grad_cache.append(dL @ grad_cache)
                     else:
                     #    print("* grad: {}, dL: {}".format(grad_cache.shape, dL.shape))
                         node.global_grad_cache.append(grad_cache * dL)
+                    #print("done with matmul")
 
-            
+            #print("done with gradient iteration")
             # recursively backpropogate through the graph
             for i, parent in enumerate(node.parents):
+                #print("gradient probe parent search")
                 self.trace(parent, node.global_grad_cache[i])
-    def clear_cache(self, node):
-        if node.isFork:
-            node.fork_cache = None
-            node.fork_counter_cache = None
-        if node.local_grad_cache is not None:
-            node.local_grad_cache = None
-        if node.global_grad_cache is not None:
-            node.global_grad_cache = None
-        if node.grad is not None:
-            node.grad = None
-        if node.cache is not None:
-            node.cache = None
-            for parent in node.parents:
-                self.clear_cache(parent)
+            #print("gradient probe terminated")
+    
         
 
 class OptimizationProbe(object):
@@ -211,3 +206,19 @@ class OptimizationProbe(object):
             else:
                 for parent in node.parents:
                     self.trace(parent)
+
+def clear_cache(node):
+        if node.isFork:
+            node.fork_cache = None
+            node.fork_counter_cache = None
+        if node.local_grad_cache is not None:
+            node.local_grad_cache = None
+        if node.global_grad_cache is not None:
+            node.global_grad_cache = None
+        if node.isTensor:
+            if node.grad is not None:
+                node.grad = None
+        if node.cache is not None:
+            node.cache = None
+            for parent in node.parents:
+                clear_cache(parent)

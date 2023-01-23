@@ -21,7 +21,7 @@ class Add(graph.GraphNode):
 
 class Weight(graph.GraphModule):
     def __init__(self, parent, shape):
-        self.weight = graph.Tensor(np.random.rand(*shape) * 0.1, des="weight")
+        self.weight = graph.Tensor(jnp.array(np.random.rand(*shape) * 0.1), des="weight")
         #self.weight = graph.Tensor(jnp.array([[1.,2.],[1.,2.],[1.,2.]]), "weight")
 
         self.matmul = MatMul([self.weight, parent])
@@ -32,7 +32,7 @@ class Weight(graph.GraphModule):
 
 class Bias(graph.GraphModule):
     def __init__(self, parent, dim):
-        self.bias = graph.Tensor(np.random.rand(dim) * 0.1, des="bias")
+        self.bias = graph.Tensor(jnp.array(np.random.rand(dim) * 0.1), des="bias")
         #self.bias = graph.Tensor(jnp.array([1.,2.]), "bias")
 
         self.add = Add([parent, self.bias])
@@ -49,7 +49,15 @@ class Linear(graph.GraphModule):
 
         self.link = self.bias.link
 
-
+class Input(graph.GraphNode):
+    def __init__(self):
+        super().__init__()
+        self.isAttached = False
+    def attach(self, parent):
+        self.parents = [parent]
+        self.isAttached = True
+    def __str__(self):
+        return "Graph Input. Attached: {}".format(self.isAttached)
 
 
 class ReLU(graph.GraphNode):

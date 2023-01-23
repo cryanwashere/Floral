@@ -2,12 +2,14 @@ import graph
 import datasets
 import nn
 import loss
+import visual
+import optim
 
-mnist = datasets.MNIST()
 
 class Model(graph.GraphModule):
-    def __init__(self, parent):
-        self.linear1 = nn.Linear(parent,[64, 768])
+    def __init__(self):
+        self.input = nn.Input()
+        self.linear1 = nn.Linear(self.input,[64, 784])
         self.relu1 = nn.ReLU(self.linear1.link)
         self.linear2 = nn.Linear(self.relu1, [64, 64])
         self.relu2 = nn.ReLU(self.linear2.link)
@@ -15,4 +17,29 @@ class Model(graph.GraphModule):
 
         self.crossentropy = loss.CategoricalCrossEntropy(self.linear3.link)
 
-        self.roots = [self.relu2,self.crossentropy]
+
+model = Model()
+
+mnist = datasets.MNIST()
+sample_image, sample_label = mnist[0]
+print(sample_label.param)
+model.input.attach(sample_image)
+model.crossentropy.attach(sample_label)
+
+#visual.summary(model.crossentropy)
+
+forward_probe = graph.ForwardProbe()
+sample_loss = forward_probe.trace(model.crossentropy)
+
+
+gradient_probe = graph.GradientProbe()
+gradient_probe.trace(model.crossentropy)
+print("done with mnist example")
+
+optimizer = optim.StochasticGradientDescent(lr=0.01)
+optim_probe = graph.OptimizationProbe(optimizer)
+optim_probe.trace(model.crossentropy)
+forward_probe.clear_cache(model.crossentropy)
+print(sample_loss)
+print(forward_probe.trace(model.crossentropy))
+

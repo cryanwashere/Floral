@@ -36,10 +36,10 @@ def optimize(link):
     forward_probe = graph.ForwardProbe()
     forward_probe.trace(link)
     grad_probe = graph.GradientProbe()
-    grad_probe.trace(mse, None)
+    grad_probe.trace(link, None)
     optimizer = optim.StochasticGradientDescent(lr=0.01)
     optim_probe = graph.OptimizationProbe(optimizer)
-    optim_probe.trace(mse)
+    optim_probe.trace(link)
 
     forward_probe.clear_cache(mse)
 
