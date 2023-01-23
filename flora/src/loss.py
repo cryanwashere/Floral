@@ -28,7 +28,10 @@ class CategoricalCrossEntropy(LossNode):
         super().__init__(parent)
     @staticmethod
     def fn(x,y):
+        #print("input",x)
         smx = jnp.exp(x)
+        #print("exp",smx)
         smx = smx / jnp.sum(smx)
+        #print("smx",smx)
         return -jnp.sum(y * jnp.log(smx))
     
