@@ -33,14 +33,14 @@ class Model(graph.GraphModule):
 model = Model()
 ```
 
-When constructing a graph in floral, there exists ```flora.graph.GraphNode``` objects, and ```flora.graph.GraphModule``` objects. All of a graph's functionality comes from the ```flora.graph.GraphNode``` objects, which either store data, or perform functions, and are linked to parent nodes. The ```flora.graph.GraphModule``` objects simply contain node objects, and exist only for abstraction. All ```flora.graph.GraphModule``` objects must have a ```link``` attribute, which is a reference to the last node in their graph. 
+When constructing a graph in floral, there exists ```floral.graph.GraphNode``` objects, and ```floral.graph.GraphModule``` objects. All of a graph's functionality comes from the ```floral.graph.GraphNode``` objects, which either store data, or perform functions, and are linked to parent nodes. The ```floral.graph.GraphModule``` objects simply contain node objects, and exist only for abstraction. All ```floral.graph.GraphModule``` objects must have a ```link``` attribute, which is a reference to the last node in their graph. 
 
 lets load the MNIST dataset to train our nerual network on.
 ```python
 mnist = datasets.MNIST()
 ```
 
-When we want to inference our graph, we attach the variable tensors to their respective nodes, in this case the model's input node, and loss node, and use the ```flora.graph.forward_trace(node)``` method to get the node's output, which is the model's loss in this case.
+When we want to inference our graph, we attach the variable tensors to their respective nodes, in this case the model's input node, and loss node, and use the ```floral.graph.forward_trace(node)``` method to get the node's output, which is the model's loss in this case.
 
  ```python
  def inference(input_link, loss_link, x, y):
@@ -58,7 +58,7 @@ sample_image, sample_label = mnist[0]
 print(inference(model.input, model.crossentropy, sample_image, sample_label))
 ```
  
-After inferencing a graph, we can use the ```flora.graph.gradient_trace(node)``` method to calculate gradients for each tensor in the graph, and then optimize them with a ```flora.graph.OptimizationProbe``` object. It is also very important to clear the graph's cache before it is traced again, through the ```flora.graph.clear_cache(node)``` method
+After inferencing a graph, we can use the ```floral.graph.gradient_trace(node)``` method to calculate gradients for each tensor in the graph, and then optimize them with a ```floral.graph.OptimizationProbe``` object. It is also very important to clear the graph's cache before it is traced again, through the ```floral.graph.clear_cache(node)``` method
  
  ```python
  def optimize(optim_probe, input_link, loss_link, x, y):
@@ -73,7 +73,7 @@ After inferencing a graph, we can use the ```flora.graph.gradient_trace(node)```
     return loss
 ```
 
-To make an optimization probe, we need a ```flora.optim.Optimizer``` object. For this, we will use ```flora.optim.StochasticGradientDescent```.
+To make an optimization probe, we need a ```floral.optim.Optimizer``` object. For this, we will use ```floral.optim.StochasticGradientDescent```.
 
 ```python
 optim_probe = graph.OptimizationProbe(optim.StochasticGradientDescent(lr=0.01))
