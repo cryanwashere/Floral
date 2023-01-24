@@ -7,24 +7,6 @@ import optim
 import nn
 
 
-'''
-_input = graph.Tensor(np.random.rand(64) * 0.1, "input")
-linear = nn.Linear(_input, [64,64])
-linear2 = nn.Linear(linear.link, [64,1])
-
-mse = loss.MeanSquaredError(linear2.link)
-label = graph.Tensor(np.array([5.0]), "label")
-mse.attach(label)
-
-forward = graph.ForwardProbe()
-_loss = forward.trace(mse)
-print("loss: {}".format(_loss))
-
-
-grad_probe = graph.GradientProbe()
-grad_probe.trace(mse, None)
-
-'''
 
 def inference(link):
     forward_probe = graph.ForwardProbe()
