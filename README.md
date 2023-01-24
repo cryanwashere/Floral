@@ -116,5 +116,5 @@ for i in range(len(train_images)):
 print("final loss: {}".format(evaluate((test_images, test_labels), model.input, model.crossentropy)))
 ```
 # contact
-If you have any questions, comments, concerns, or wish to collaborate, please email [Cameron Ryan](cjryanwashere@gmail.com).
+If you have any questions, comments, concerns, or wish to collaborate, please email [Cameron Ryan](mailto:cjryanwashere@gmail.com).
 
