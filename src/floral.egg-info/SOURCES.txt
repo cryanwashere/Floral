@@ -7,10 +7,12 @@ src/floral/graph.py
 src/floral/loss.py
 src/floral/nn.py
 src/floral/optim.py
-src/floral/test.py
 src/floral/visual.py
 src/floral.egg-info/PKG-INFO
 src/floral.egg-info/SOURCES.txt
 src/floral.egg-info/dependency_links.txt
 src/floral.egg-info/requires.txt
 src/floral.egg-info/top_level.txt
+src/floral.egg-info/zip-safe
+src/floral/data/mnist_labels_uint8
+src/floral/data/mnist_sprite.png
