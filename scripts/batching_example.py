@@ -1,10 +1,4 @@
-import graph
-import datasets
-import nn
-import loss
-import visual
-import optim
-
+from .src.floral import graph
 
 class Model(graph.GraphModule):
     def __init__(self):
