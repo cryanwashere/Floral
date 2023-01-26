@@ -12,6 +12,7 @@ class GraphNode(object):
         self.link = self
 
         self.child_trace_cache = False
+        self.trace_fn_cache = None
 
 def child_trace(node):
     '''
@@ -27,6 +28,52 @@ def child_trace(node):
         if not parent.child_trace_cache:
             graph_tensors += child_trace(parent)
     return graph_tensors
+
+def trace_tensor_fn(node, tensor):
+    '''
+    creates a function of the graph where every thing is a constant,
+    except for the tensor
+    '''
+    if node.isTensor:
+        if node == tensor:
+            return lambda x : x
+        else:
+            return lambda x : node.param
+    else:
+        if node.trace_fn_cache is not None:
+            return node.trace_fn_cache
+        else:
+            ancestor_fns = list()
+            for parent in node.parents:
+                parent_fn = trace_tensor_fn(parent,tensor)
+                ancestor_fns.append(parent_fn)
+            psi = lambda x : node.fn(*[fn(x) for fn in ancestor_fns])
+            node.trace_fn_cache = psi
+            return psi
+
+def gradient_trace2(node):
+    graph_tensors = child_trace(node)
+    grad_tensors = list()
+    for tensor in graph_tensors:
+        if not tensor.frozen:
+            grad_tensors.append(tensor)
+    
+    for tensor in grad_tensors:
+        tensor_fn = trace_tensor_fn(node, tensor)
+        tensor_grad_fn = grad(tensor_fn)
+        tensor.grad = tensor_grad_fn(tensor.param)
+
+def gradient_trace(node, phi=None):
+    if phi is None:
+        phi = lambda x : x
+    #psi = lambda y: phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))
+
+    for i, parent in enumerate(node.parents):
+        psi = lambda y : phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))   
+        if parent.isTensor:
+            if not parent.frozen:
+                parent.grad = grad(psi)(node.cache[i])
+        gradient_trace(parent, phi=psi)  
 
 def fork_trace(node):
     for parent in node.parents:
@@ -89,17 +136,7 @@ def forward_trace( node ):
         out = node.fn(*node.cache)
         return out
 
-def gradient_trace(node, phi=None):
-    if phi is None:
-        phi = lambda x : x
-    
-    for i, parent in enumerate(node.parents):
-        
-        psi = lambda y: phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))
-        if parent.isTensor:
-            if not parent.frozen:
-                parent.grad = grad(psi)(node.cache[i])
-        gradient_trace(parent, phi=psi)    
+  
 
 
 class OptimizationProbe(object):
