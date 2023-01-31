@@ -2,6 +2,8 @@ import graph
 from jax import grad
 import jax.numpy as jnp
 import numpy as np
+from jax.lax import conv_general_dilated
+
 
 class MatMul(graph.GraphNode):
     def __init__(self, parents):
@@ -80,3 +82,32 @@ class Softmax(graph.GraphNode):
         exp = jnp.exp(x)
         return exp / jnp.sum(exp)
 
+
+def make_conv(stride, padding="SAME"):
+    return lambda lhs, rhs : conv_general_dilated(
+        lhs, rhs,
+        stride,
+        padding=padding
+    )
+
+class Convolution(graph.GraphNode):
+    def __init__(self, parents, stride):
+        super().__init__(self)
+        self.parents = parents
+        # parents should be: [ lhs, rhs ]
+
+        self.fn = make_conv(stride)
+
+class Conv2D(graph.GraphModule):
+    def __init__(self, parent, kernel_shape, stride):
+        
+        self.kernel_shape = kernel_shape
+        self.stride = stride
+
+        self.kernel = graph.Tensor(jnp.array(np.random.rand(*kernel_shape) * 0.01))
+        self.convolution = Convolution([parent, self.kernel], stride)
+
+        self.link = self.convolution
+    
+    def __str__(self):
+        return "Conv2D, kernel: {}, stride {}".format(self.kernel_shape, self.stride)
