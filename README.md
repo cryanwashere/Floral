@@ -115,6 +115,25 @@ for i in range(len(train_images)):
         print("step {}, loss: {}".format(i, loss))
 print("final loss: {}".format(evaluate((test_images, test_labels), model.input, model.crossentropy)))
 ```
+
+# constructing a graph node
+
+Since floral is made in jax, functions should be created in jax numpy, using the ```jax.numpy``` API. Additionally, note that the only thing a graph node should do is hold a python ```list``` of references to its parent nodes, and hold a function attribute ```fn```. A node's ```fn``` should take in the same amount of parameters, as the node has parents. 
+
+```python
+from floral import graph
+import jax.numpy as jnp
+
+class Sigmoid(graph.GraphNode):
+    def __init__(self, parent):
+        super().__init__()
+        self.parents = [parent]
+    def fn(x):
+        return 1 / jnp.exp(-x)
+
+```
+
+
 # contact
 If you have any questions, comments, concerns, or wish to collaborate, please email [Cameron Ryan](mailto:cjryanwashere@gmail.com).
 
