@@ -1,6 +1,3 @@
-import graph
-from IPython import display
-
 class PositionController(object):
     def __init__(self, left=0, top=0):
         self.left = left
@@ -81,7 +78,6 @@ class VisualizationProbe(object):
         
     def display(self):
         self.document += "</html>"
-        #display.HTML(self.document)
         return self.document
 
 def summary(node):

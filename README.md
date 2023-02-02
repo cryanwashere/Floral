@@ -129,7 +129,7 @@ class Sigmoid(graph.GraphNode):
         super().__init__()
         self.parents = [parent]
     def fn(x):
-        return 1 / jnp.exp(-x)
+        return 1 / ( 1 + jnp.exp(-x) )
 
 ```
 
