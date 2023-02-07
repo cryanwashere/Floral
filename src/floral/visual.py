@@ -86,3 +86,13 @@ def summary(node):
     
     with open("graph_visualizations/out.html","w") as f:
         f.write(visualization_probe.display())
+
+def print_summary(node):
+    print(node)
+    if node is None:
+        return
+    node.visualization_probe_cache = True
+
+    for parent in node.parents:
+        if not parent.visualization_probe_cache:
+            print_summary(parent)
