@@ -34,4 +34,4 @@ class CategoricalCrossEntropy(LossNode):
         smx = smx / jnp.sum(smx)
         #print("smx",smx)
         return -jnp.sum(y * jnp.log(smx))
-    
+

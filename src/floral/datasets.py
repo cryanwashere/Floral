@@ -1,11 +1,10 @@
 from PIL import Image
 from numpy import asarray, frombuffer
-import graph
+from src.floral import graph
 import numpy as np
 import jax.numpy as jnp
 from pkg_resources import resource_stream
 import os
-import random
 
 class Dataset(object):
     def __init__(self):
@@ -17,14 +16,28 @@ class Dataset(object):
     
     def map(self, map_fn):
         for i in range(len(self)):
-            self.data[i], self.labels[i] = map_fn(self.data[i], self.labels[i])
+            arr, lb = map_fn(self.data[i], self.labels[i])
+            self.data.at[i].set(arr)
+            self.labels.at[i].set(lb) 
     
     def shuffle(self, buffer_size=64, shuffle_itr=16):
         for i in range(shuffle_itr):
             shuffle_buffer_idx = np.random.randint(len(self), size=buffer_size)
             shuffle_buffer_data, shuffle_buffer_labels = self.data[shuffle_buffer_idx], self.labels[shuffle_buffer_idx]
             shuffle_buffer_idx = np.random.shuffle(shuffle_buffer_idx)
-            self.data[shuffle_buffer_idx], self.labels[shuffle_buffer_idx] = shuffle_buffer_data, shuffle_buffer_labels
+            self.data = self.data.at[shuffle_buffer_idx].set(shuffle_buffer_data)
+            self.labels = self.labels.at[shuffle_buffer_idx].set(shuffle_buffer_labels)
+    
+    def save(self, path):
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        with open(os.path.join(path, "data.npy"), "wb") as f:
+            jnp.save(f, self.data)
+        with open(os.path.join(path, "labels.npy"), "wb") as f:
+            jnp.save(f, self.labels)
+
+    def __getitem__(self, i):
+        return graph.Tensor(jnp.array(self.data[i]), frozen=True, des="dataset tensor"), graph.Tensor(self.labels[i].astype(np.float64), frozen=True, des="dataset label")
 
             
 
@@ -40,24 +53,48 @@ class MNIST(object):
     def __getitem__(self, i):
         return graph.Tensor(jnp.array(self.data[i]), frozen=True), graph.Tensor(self.labels[i].astype(np.float64), frozen=True, des="MNIST label")
 
+def one_hot(index, max):
+    #print(index, max)
+    x = jnp.zeros(max)
+    x = x.at[index].set(1.0)
+    return x
+
 class from_sorted_dir(Dataset):
     def __init__(self, path):
         self.class_list = os.listdir(path)
 
-        self.data = jnp.array()
-        self.labels = jnp.array()
+        self.data = None
+        self.labels = None
 
         for i, _class in enumerate(self.class_list):
             obj_list = os.listdir(os.path.join(path, _class))
-            for obj in obj_list:
+            print("opening class {}: {}, containing {} files".format(i, _class, len(obj_list)))
+            
+            for j, obj in enumerate(obj_list[:100]):
                 im_path = os.path.join(path, _class, obj)
                 im = Image.open(im_path)
+                im = im.resize((256,256))
                 im_data = asarray(im)
-                self.data = np.append(self.data, im_data)
-                self.labels = np.append(self.labels, i)
+                im_data = np.expand_dims(im_data, axis=0)
+                if self.data is None:
+                    self.data = im_data
+                else:
+                    self.data = np.concatenate((self.data,im_data), axis=0)
+
+                label = np.expand_dims(one_hot(i, len(self.class_list)), axis=0)
+
+                if self.labels is None:
+                    self.labels = label
+                else:
+                    self.labels = np.concatenate((self.labels, label), axis=0)
 
         # we now have our dataset loaded, but it is completely unsorted
-    def __getitem__(self, i):
-        return graph.Tensor(jnp.array(self.data[i]), frozen=True, des="dataset tensor"), graph.Tensor(self.labels[i].astype(np.float64), frozen=True, des="dataset label")
+    
 
 
+class from_saved_npy(Dataset):
+    def __init__(self, path):
+        with open(os.path.join(path, "data.npy"), "rb") as f:
+            self.data = jnp.load(f)
+        with open(os.path.join(path, "labels.npy"), "rb") as f:
+            self.labels = jnp.load(f)
