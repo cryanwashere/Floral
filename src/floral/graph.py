@@ -17,13 +17,18 @@ class GraphNode(object):
 def child_trace(node):
     '''
     iterate though a graph, and attach each node to it's child nodes
-    returns a list of all of the tensors in the graph
+    returns a list of all of the tensors in the graph, in a 
+    deterministic order.
     '''
     graph_tensors = list()
     node.child_trace_cache = True
     for parent in node.parents:
         parent.child_nodes.append(node)
-        if parent.isTensor:
+        if parent is None: 
+            # the parent is an empty input tensor: 
+            graph_tensors.append(None)
+            continue
+        if parent.isTensor and not parent.child_trace_cache:
             graph_tensors.append(parent)
         if not parent.child_trace_cache:
             graph_tensors += child_trace(parent)
