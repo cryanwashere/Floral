@@ -82,7 +82,7 @@ class Softmax(graph.GraphNode):
         exp = jnp.exp(x)
         return exp / jnp.sum(exp)
 
-
+# to be clear, this is what Flax, Jax, and Tensorflow does
 def make_conv(stride, padding="SAME"):
     return lambda lhs, rhs : conv_general_dilated(
         lhs, rhs,
@@ -111,3 +111,19 @@ class Conv2D(graph.GraphModule):
     
     def __str__(self):
         return "Conv2D, kernel: {}, stride {}".format(self.kernel_shape, self.stride)
+
+class Sequential(graph.GraphModule):
+    def __init__(self, parent, modules, params):
+        self.module_list = list()
+        for module, param in zip(modules, params):
+
+            #initialize the module with the given params
+            mod = module(parent, *param)
+            self.module_list.append(mod)
+
+            # as Linus Torvalds would say, 'tasteful'
+            parent = mod
+
+        self.link = self.module_list[-1]
+
+

@@ -1,0 +1,10 @@
+
+
+node weight ([?,a], [b,a] -> [?,b])
+
+node bias ([?,b], [b] -> [?,b])
+
+module linear ([?,a], -> [?,b])
+{
+    
+}

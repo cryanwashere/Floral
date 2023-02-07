@@ -23,8 +23,8 @@ def child_trace(node):
     node.child_trace_cache = True
     for parent in node.parents:
         parent.child_nodes.append(node)
-        if node.isTensor:
-            graph_tensors.append(node)
+        if parent.isTensor:
+            graph_tensors.append(parent)
         if not parent.child_trace_cache:
             graph_tensors += child_trace(parent)
     return graph_tensors
@@ -51,7 +51,7 @@ def trace_tensor_fn(node, tensor):
             node.trace_fn_cache = psi
             return psi
 
-def gradient_trace2(node):
+def gradient_trace(node):
     graph_tensors = child_trace(node)
     grad_tensors = list()
     for tensor in graph_tensors:
@@ -63,7 +63,7 @@ def gradient_trace2(node):
         tensor_grad_fn = grad(tensor_fn)
         tensor.grad = tensor_grad_fn(tensor.param)
 
-def gradient_trace(node, phi=None):
+def gradient_trace_outdated(node, phi=None):
     if phi is None:
         phi = lambda x : x
     #psi = lambda y: phi(node.fn( *node.cache[:i], y, *node.cache[i+1:] ))
